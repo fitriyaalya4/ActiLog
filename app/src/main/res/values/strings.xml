@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">ActiLog</string>
+    <string name="title">Nama Kegiatan</string>
+    <string name="isi_kegiatan">Isi Kegiatan</string>
+    <string name="simpan">Simpan</string>
+    <string name="kembali">Kembali</string>
+    <string name="edit_actilogkegiatan">Ubah Kegiatan</string>
+    <string name="format_tanggal">dd-MM-yyyy HH:mm</string>
+    <string name="label_tanggal">Tanggal &amp; Waktu</string>
+    <string name="desc_pilih_tanggal">Pilih tanggal</string>
+    <string name="invalid">Nama kegiatan, isi kegiatan dan tanggal kegiatan tidak boleh kosong</string>
+    <string name="lainnya">Opsi lainnya</string>
+    <string name="hapus">Hapus Kegiatan</string>
+    <string name="pesan_hapus">Hapus Kegiatan ini?</string>
+    <string name="tombol_hapus">Hapus</string>
+    <string name="tombol_batal">Batal</string>
+    <string name="list">Tampilan list</string>
+    <string name="grid">Tampilan grid</string>
+    <string name="tambah_actilogkegiatan">Tambah Kegiatan</string>
+    <string name="list_kosong">Belum ada Data</string>
+</resources>
