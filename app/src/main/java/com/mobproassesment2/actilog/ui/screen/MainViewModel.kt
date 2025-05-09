@@ -1,50 +1,16 @@
 package com.mobproassesment2.actilog.ui.screen
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.mobproassesment2.actilog.database.KegiatanDao
 import com.mobproassesment2.actilog.model.Kegiatan
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
-class MainViewModel : ViewModel() {
-    val data = listOf(
-        Kegiatan(
-            1,
-            "Tugas",
-            "Tugas KAT modul 7",
-            "19-05-2025 14:30"
-        ),
-       Kegiatan(
-            2,
-            "Tugas",
-            "Tugas KAT modul 8",
-            "19-05-2025 14:30"
-        ),
-        Kegiatan(
-            3,
-            "Belanja",
-            "Beli Ayam, Cumi, Udang, sayur",
-            "19-05-2025 14:30"
-        ),
-        Kegiatan(
-            4,
-            "Baca Buku",
-            "Hujan halaman 115",
-            "19-05-2025 14:30"
-        ),
-        Kegiatan(
-            5,
-            "Tugas",
-            "Buat Artikel KPL",
-            "19-05-2025 14:30"
-        ),
-        Kegiatan(
-            6,
-            "Tugas",
-            "Jurnal PT Bab 4",
-            "19-05-2025 14:30"
-        )
-    )
+class MainViewModel(dao: KegiatanDao) : ViewModel() {
 
-    fun getCatatan(id: Long): Kegiatan? {
-        return data.find { it.id == id }
-    }
+    val data: StateFlow<List<Kegiatan>> = dao.getKegiatan()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
 }

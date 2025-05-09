@@ -3,6 +3,7 @@ package com.mobproassesment2.actilog.ui.screen
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +13,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +44,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.mobproassesment2.actilog.R
 import com.mobproassesment2.actilog.ui.theme.ActiLogTheme
+import com.mobproassesment2.actilog.util.ViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -49,13 +54,15 @@ const val  KEY_ID_KEGIATAN ="idKegiatan"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(navController: NavController, id: Long? = null){
-    val  viewModel: MainViewModel = viewModel()
+    val context = LocalContext.current
+    val factory = ViewModelFactory(context)
+    val viewModel: DetailViewModel = viewModel(factory = factory)
 
     var judul by remember { mutableStateOf("") }
     var catatan by remember { mutableStateOf("") }
     var selectedDateTime by remember { mutableStateOf("") }
+    var isButtonEnabled by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
     val formatTanggal = stringResource(R.string.format_tanggal)
 
     fun showDateTimePicker() {
@@ -75,6 +82,10 @@ fun DetailScreen(navController: NavController, id: Long? = null){
         judul = data.judul
         catatan = data.catatan
         selectedDateTime = data.tanggal
+    }
+
+    LaunchedEffect(judul, catatan, selectedDateTime) {
+        isButtonEnabled = judul.isNotEmpty() && catatan.isNotEmpty() && selectedDateTime.isNotEmpty()
     }
 
     Scaffold (
@@ -101,12 +112,30 @@ fun DetailScreen(navController: NavController, id: Long? = null){
 
                 ),
                 actions = {
-                    IconButton(onClick = {navController.popBackStack()}) {
+                    IconButton(onClick = {
+                        if (judul.isBlank() || catatan.isBlank() || selectedDateTime.isBlank()) {
+                            Toast.makeText(context, context.getString(R.string.invalid), Toast.LENGTH_SHORT).show()
+
+                        } else {
+                            if (id == null) {
+                                viewModel.insert(judul, catatan, selectedDateTime)
+                            } else {
+                                viewModel.update(id, judul, catatan, selectedDateTime)
+                            }
+                            navController.popBackStack()
+                        }
+                    }) {
                         Icon(
                             imageVector = Icons.Outlined.Check,
                             contentDescription = stringResource(R.string.simpan),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (isButtonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                    if (id != null){
+                        DeleteAction {
+                            viewModel.delete(id)
+                            navController.popBackStack()
+                        }
                     }
                 }
             )
@@ -122,6 +151,31 @@ fun DetailScreen(navController: NavController, id: Long? = null){
             onPickDateTime = { showDateTimePicker() },
             modifier = Modifier.padding(padding)
         )
+    }
+}
+@Composable
+fun DeleteAction(delete: ()->Unit){
+    var expanded by remember { mutableStateOf(false) }
+    IconButton(onClick = {expanded = true}) {
+        Icon(
+            imageVector = Icons.Filled.MoreVert,
+            contentDescription = stringResource(R.string.lainnya),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {expanded = false}
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(text = stringResource(id = R.string.hapus))
+                },
+                onClick = {
+                    expanded = false
+                    delete()
+                }
+            )
+        }
     }
 }
 @Composable
