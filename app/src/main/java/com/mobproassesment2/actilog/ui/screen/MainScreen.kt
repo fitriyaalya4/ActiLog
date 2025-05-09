@@ -3,12 +3,7 @@ package com.mobproassesment2.actilog.ui.screen
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -16,22 +11,9 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,41 +32,46 @@ import com.mobproassesment2.actilog.navigation.Screen
 import com.mobproassesment2.actilog.ui.theme.ActiLogTheme
 import com.mobproassesment2.actilog.util.SettingsDataStore
 import com.mobproassesment2.actilog.util.ViewModelFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(navController:NavHostController){
-    val dataStore = SettingsDataStore(LocalContext.current)
-    val showList by dataStore.layoutFlow.collectAsState(true)
+fun MainScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val dataStore = remember { SettingsDataStore(context) }
+    val layoutFlow by dataStore.layoutFlow.collectAsState(initial = true)
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold (
+    Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(text = stringResource(R.string.app_name))
-                },
+                title = { Text(stringResource(R.string.app_name)) },
                 colors = TopAppBarDefaults.mediumTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary
-
                 ),
                 actions = {
-                    IconButton(onClick = { CoroutineScope(Dispatchers.IO).launch {
-                        dataStore.saveLayout(!showList)
-                    }
-                    }){
+                    IconButton(onClick = {
+                        scope.launch { dataStore.saveLayout(!layoutFlow) }
+                    }) {
                         Icon(
                             painter = painterResource(
-                                if (showList) R.drawable.baseline_grid_view_24
+                                if (layoutFlow) R.drawable.baseline_grid_view_24
                                 else R.drawable.baseline_view_list_24
                             ),
                             contentDescription = stringResource(
-                                if (showList) R.string.grid
-                                else R.string.list
+                                if (layoutFlow) R.string.grid else R.string.list
                             ),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = {
+                        navController.navigate(Screen.TempatKegiatanDibuang.route)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_restore_from_trash_24),
+                            contentDescription = stringResource(R.string.tempat_sampah),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -92,110 +79,181 @@ fun MainScreen(navController:NavHostController){
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate(Screen.FormBaru.route)
-                }
-            ) {
+            FloatingActionButton(onClick = {
+                navController.navigate(Screen.FormBaru.route)
+            }) {
                 Icon(
-                    imageVector = Icons.Filled.Add,
+                    imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.tambah_actilogkegiatan),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-        }
-    ){  innerPadding ->
-        ScreenContent(showList,Modifier.padding(innerPadding),navController)
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        ScreenContent(
+            showList = layoutFlow,
+            modifier = Modifier.padding(innerPadding),
+            navController = navController,
+            snackbarHostState = snackbarHostState
+        )
     }
 }
 
 @Composable
-fun ScreenContent(showList: Boolean,modifier: Modifier = Modifier, navController: NavHostController) {
+fun ScreenContent(
+    showList: Boolean,
+    modifier: Modifier = Modifier,
+    navController: NavHostController,
+    snackbarHostState: SnackbarHostState
+) {
     val context = LocalContext.current
-    val factory = ViewModelFactory(context)
-    val viewModel: MainViewModel = viewModel(factory = factory)
+    val viewModel: MainViewModel = viewModel(factory = ViewModelFactory(context))
+    val detailViewModel: DetailViewModel = viewModel(factory = ViewModelFactory(context))
     val data by viewModel.data.collectAsState()
+    val scope = rememberCoroutineScope()
+    val openDialog = remember { mutableStateOf(false) }
+    val selectedKegiatan = remember { mutableStateOf<Kegiatan?>(null) }
+
+    if (openDialog.value) {
+        AlertDialog(
+            onDismissRequest = { openDialog.value = false },
+            title = { Text(stringResource(R.string.konfirmasi_hapus)) },
+            text = { Text(stringResource(R.string.yakin_hapus)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedKegiatan.value?.let { kegiatan ->
+                        detailViewModel.recentlyDeletedKegiatan = kegiatan
+                        detailViewModel.delete(kegiatan.id)
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.data_dihapus),
+                                actionLabel = context.getString(R.string.undo)
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                detailViewModel.restoreDeletedKegiatan()
+                            }
+                        }
+                    }
+                    openDialog.value = false
+                }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    openDialog.value = false
+                }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            }
+        )
+    }
 
     if (data.isEmpty()) {
         Column(
-            modifier = modifier.fillMaxSize().padding(16.dp),
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = stringResource(id = R.string.list_kosong))
+            Text(stringResource(R.string.list_kosong))
         }
-    }else {
-            if (showList) {
-                LazyColumn(
-                    modifier = modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 84.dp)
-
-                ) {
-            items(data) {
-                ListItem(kegiatan =  it){
-                    navController.navigate(Screen.FormUbah.withId(it.id))
-                }
-                HorizontalDivider()
-            }
-        }
-    }
-            else {
-                LazyVerticalStaggeredGrid(
-                    modifier = modifier.fillMaxSize(),
-                    columns = StaggeredGridCells.Fixed(2),
-                    verticalItemSpacing = 8.dp,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 84.dp)
-                ) {
-                    items(data) {
-                        GridItem(kegiatan = it) {
-                            navController.navigate(Screen.FormUbah.withId(it.id))
+    } else {
+        if (showList) {
+            LazyColumn(
+                modifier = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 84.dp)
+            ) {
+                items(data) { kegiatan ->
+                    ListItem(
+                        kegiatan = kegiatan,
+                        onClick = { navController.navigate(Screen.FormUbah.withId(kegiatan.id)) },
+                        onDelete = {
+                            selectedKegiatan.value = it
+                            openDialog.value = true
                         }
-                    }
+                    )
+                    HorizontalDivider()
+                }
+            }
+        } else {
+            LazyVerticalStaggeredGrid(
+                modifier = modifier.fillMaxSize(),
+                columns = StaggeredGridCells.Fixed(2),
+                verticalItemSpacing = 8.dp,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 84.dp)
+            ) {
+                items(data) { kegiatan ->
+                    GridItem(
+                        kegiatan = kegiatan,
+                        onClick = { navController.navigate(Screen.FormUbah.withId(kegiatan.id)) },
+                        onDelete = {
+                            selectedKegiatan.value = it
+                            openDialog.value = true
+                        }
+                    )
                 }
             }
         }
     }
-
-
+}
 @Composable
-fun ListItem(kegiatan: Kegiatan, onClick:()->Unit){
-    Column(
-        modifier = Modifier.fillMaxWidth()
+fun ListItem(kegiatan: Kegiatan, onClick: () -> Unit, onDelete: (Kegiatan) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable { onClick() }
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ){
-        Text(
-            text = kegiatan.judul,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = kegiatan.catatan,
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = kegiatan.tanggal,
-            style = MaterialTheme.typography.bodySmall
-        )
+            .padding(16.dp)
+            .heightIn(min = 120.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = kegiatan.judul,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = kegiatan.catatan,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = kegiatan.tanggal,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        IconButton(onClick = { onDelete(kegiatan) }) {
+            Icon(Icons.Default.Delete, contentDescription = "Hapus")
+        }
     }
 }
 
 @Composable
-fun GridItem (kegiatan: Kegiatan, onClick: () -> Unit){
+fun GridItem(kegiatan: Kegiatan, onClick: () -> Unit, onDelete: (Kegiatan) -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .clickable { onClick() }
+            .padding(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(1.dp, DividerDefaults.color)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = kegiatan.judul,
@@ -203,15 +261,25 @@ fun GridItem (kegiatan: Kegiatan, onClick: () -> Unit){
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = kegiatan.catatan,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
             Text(
                 text = kegiatan.tanggal,
                 style = MaterialTheme.typography.bodySmall
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(onClick = { onDelete(kegiatan) }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
+                }
+            }
         }
     }
 }

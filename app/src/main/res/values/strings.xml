@@ -1,12 +1,12 @@
 <resources>
     <string name="app_name">ActiLog</string>
     <string name="title">Nama Kegiatan</string>
-    <string name="isi_kegiatan">Isi Kegiatan</string>
+    <string name="isi_kegiatan">Catatan Kegiatan</string>
     <string name="simpan">Simpan</string>
     <string name="kembali">Kembali</string>
     <string name="edit_actilogkegiatan">Ubah Kegiatan</string>
     <string name="format_tanggal">dd-MM-yyyy HH:mm</string>
-    <string name="label_tanggal">Tanggal &amp; Waktu</string>
+    <string name="label_tanggal">Tanggal &amp; Waktu Kegiatan</string>
     <string name="desc_pilih_tanggal">Pilih tanggal</string>
     <string name="invalid">Nama kegiatan, isi kegiatan dan tanggal kegiatan tidak boleh kosong</string>
     <string name="lainnya">Opsi lainnya</string>
@@ -17,5 +17,23 @@
     <string name="list">Tampilan list</string>
     <string name="grid">Tampilan grid</string>
     <string name="tambah_actilogkegiatan">Tambah Kegiatan</string>
+    <string name="kegiatan_dihapus">Tugas dihapus</string>
     <string name="list_kosong">Belum ada Data</string>
+    <string name="item_dihapus">Kegiatan dihapus</string>
+    <string name="batal">Batal</string>
+    <string name="data_dihapus">Data Dihapus</string>
+    <string name="undo">Undo</string>
+    <string name="konfirmasi_hapus">Konfirmasi Hapus</string>
+    <string name="yakin_hapus">Yakin Hapus</string>
+    <string name="tempat_sampah"> Tempat Sampah </string>
+    <string name="recycle_bin_title">Recycle Bin</string>
+    <string name="recycle_bin_empty_message">Recycle Bin kosong</string>
+    <string name="recycle_bin_empty_confirmation_message">Apakah Anda yakin ingin mengosongkan semua tugas?</string>
+    <string name="recycle_bin_empty_confirmation">Kosongkan</string>
+    <string name="recycle_bin_empty_cancel">Batal</string>
+    <string name="recycle_bin_restore">Pulihkan</string>
+    <string name="recycle_bin_delete_permanent">Hapus Permanen</string>
+    <string name="recycle_bin_delete_confirmation_message">Apakah Anda yakin ingin menghapus tugas ini secara permanen?</string>
+    <string name="recycle_bin_delete">Hapus</string>
+    <string name="recycle_bin_cancel">Batal</string>
 </resources>

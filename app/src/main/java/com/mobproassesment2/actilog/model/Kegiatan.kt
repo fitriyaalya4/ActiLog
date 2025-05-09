@@ -9,5 +9,6 @@ data class Kegiatan(
     val id: Long = 0L,
     val judul: String,
     val catatan: String,
-    val tanggal: String
+    val tanggal: String,
+    val isDeleted: Boolean = false
 )

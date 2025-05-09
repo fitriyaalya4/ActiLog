@@ -9,36 +9,53 @@ import kotlinx.coroutines.launch
 
 class DetailViewModel(private val dao: KegiatanDao) : ViewModel() {
 
-    fun insert(judul: String, isi: String, tanggal: String) {
-        val catatan = Kegiatan(
-            tanggal = tanggal,
-            judul = judul,
-            catatan = isi,
-        )
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.insert(catatan)
-        }
-    }
+    var recentlyDeletedKegiatan: Kegiatan? = null
 
-    suspend fun getCatatan(id: Long): Kegiatan? {
+    suspend fun getKegiatan(id: Long): Kegiatan? {
         return dao.getKegiatanById(id)
     }
 
+    fun insert(judul: String, isi: String, tanggal: String) {
+        val kegiatan = Kegiatan(
+            tanggal = tanggal,
+            judul = judul,
+            catatan = isi,
+            isDeleted = false
+        )
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insert(kegiatan)
+        }
+    }
+
     fun update(id: Long, judul: String, isi: String, tanggal: String) {
-        val catatan = Kegiatan(
+        val kegiatan = Kegiatan(
             id = id,
             tanggal = tanggal,
             judul = judul,
             catatan = isi,
+            isDeleted = false
         )
         viewModelScope.launch(Dispatchers.IO) {
-            dao.update(catatan)
+            dao.update(kegiatan)
         }
     }
 
     fun delete(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.deleteById(id)
+            val kegiatan = dao.getKegiatanById(id)
+            kegiatan?.let {
+                recentlyDeletedKegiatan = it.copy(isDeleted = true)
+                dao.softDeleteById(id)
+            }
+        }
+    }
+
+    fun restoreDeletedKegiatan() {
+        viewModelScope.launch(Dispatchers.IO) {
+            recentlyDeletedKegiatan?.let {
+                dao.update(it.copy(isDeleted = false))
+                recentlyDeletedKegiatan = null
+            }
         }
     }
 }

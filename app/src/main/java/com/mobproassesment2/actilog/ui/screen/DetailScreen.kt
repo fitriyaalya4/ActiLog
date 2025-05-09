@@ -1,5 +1,6 @@
 package com.mobproassesment2.actilog.ui.screen
 
+import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.res.Configuration
@@ -8,8 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
@@ -23,6 +27,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -31,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +53,7 @@ import androidx.navigation.compose.rememberNavController
 import com.mobproassesment2.actilog.R
 import com.mobproassesment2.actilog.ui.theme.ActiLogTheme
 import com.mobproassesment2.actilog.util.ViewModelFactory
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -61,7 +70,8 @@ fun DetailScreen(navController: NavController, id: Long? = null){
     var judul by remember { mutableStateOf("") }
     var catatan by remember { mutableStateOf("") }
     var selectedDateTime by remember { mutableStateOf("") }
-    var isButtonEnabled by remember { mutableStateOf(false) }
+    val isButtonEnabled by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
 
     val formatTanggal = stringResource(R.string.format_tanggal)
 
@@ -77,16 +87,18 @@ fun DetailScreen(navController: NavController, id: Long? = null){
     }
 
     LaunchedEffect(Unit) {
-        if (id == null) return@LaunchedEffect
-        val data = viewModel.getCatatan(id) ?: return@LaunchedEffect
-        judul = data.judul
-        catatan = data.catatan
-        selectedDateTime = data.tanggal
+        if (id != null) {
+            val data = viewModel.getKegiatan(id)
+            data?.let {
+                judul = it.judul
+                catatan = it.catatan
+                selectedDateTime = it.tanggal
+            }
+        }
     }
 
-    LaunchedEffect(judul, catatan, selectedDateTime) {
-        isButtonEnabled = judul.isNotEmpty() && catatan.isNotEmpty() && selectedDateTime.isNotEmpty()
-    }
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold (
         topBar = {
@@ -131,15 +143,15 @@ fun DetailScreen(navController: NavController, id: Long? = null){
                             tint = if (isButtonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (id != null){
+                    if (id != null) {
                         DeleteAction {
-                            viewModel.delete(id)
-                            navController.popBackStack()
+                            showDialog = true
                         }
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
         FormCatatan(
             title = judul,
@@ -151,8 +163,31 @@ fun DetailScreen(navController: NavController, id: Long? = null){
             onPickDateTime = { showDateTimePicker() },
             modifier = Modifier.padding(padding)
         )
+        if (id != null && showDialog) {
+            DisplayAlertDialog(
+                onDismissRequest = { showDialog = false },
+                onConfirmation = {
+                    showDialog = false
+                    coroutineScope.launch {
+                        val deletedKegiatan = viewModel.getKegiatan(id)
+                        deletedKegiatan?.let {
+                            viewModel.delete(id)
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.data_dihapus),
+                                actionLabel = context.getString(R.string.undo)
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.restoreDeletedKegiatan()
+                            }
+                            navController.popBackStack()
+                        }
+                    }
+                }
+            )
+        }
     }
 }
+
 @Composable
 fun DeleteAction(delete: ()->Unit){
     var expanded by remember { mutableStateOf(false) }
@@ -178,6 +213,7 @@ fun DeleteAction(delete: ()->Unit){
         }
     }
 }
+@SuppressLint("DefaultLocale")
 @Composable
 fun FormCatatan(
     title: String, onTitleChange: (String) -> Unit,
@@ -189,8 +225,11 @@ fun FormCatatan(
     val labelTanggal = stringResource(R.string.label_tanggal)
     val descTanggal = stringResource(R.string.desc_pilih_tanggal)
 
-    Column (
-        modifier = modifier.fillMaxSize().padding(16.dp),
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ){
         OutlinedTextField(
@@ -206,12 +245,14 @@ fun FormCatatan(
         )
         OutlinedTextField(
             value = desc,
-            onValueChange = {onDescChange(it)},
-            label = { Text(text = stringResource(R.string.isi_kegiatan))},
+            onValueChange = { onDescChange(it) },
+            label = { Text(text = stringResource(R.string.isi_kegiatan)) },
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Sentences,
             ),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 100.dp, max = 200.dp)
         )
         OutlinedTextField(
             value = dateTime,

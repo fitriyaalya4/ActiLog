@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.mobproassesment2.actilog.ui.screen.DetailScreen
 import com.mobproassesment2.actilog.ui.screen.KEY_ID_KEGIATAN
 import com.mobproassesment2.actilog.ui.screen.MainScreen
+import com.mobproassesment2.actilog.ui.screen.RecycleBinScreen
 
 @Composable
 fun SetupNavGraph(navController: NavHostController = rememberNavController()){
@@ -22,6 +23,9 @@ fun SetupNavGraph(navController: NavHostController = rememberNavController()){
         }
         composable(route = Screen.FormBaru.route){
             DetailScreen(navController)
+        }
+        composable(route = Screen.TempatKegiatanDibuang.route) {
+        RecycleBinScreen(navController)
         }
         composable(
             route = Screen.FormUbah.route,

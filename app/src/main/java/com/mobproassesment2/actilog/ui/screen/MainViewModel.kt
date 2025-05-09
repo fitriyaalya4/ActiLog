@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.stateIn
 class MainViewModel(dao: KegiatanDao) : ViewModel() {
 
     val data: StateFlow<List<Kegiatan>> = dao.getKegiatan()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
+        .stateIn(
+            scope = viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue = emptyList()
+        )
 
 }
