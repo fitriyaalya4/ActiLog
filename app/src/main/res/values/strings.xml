@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">ActiLog</string>
+<<<<<<< HEAD
     <string name="title">Nama Kegiatan</string>
     <string name="isi_kegiatan">Catatan Kegiatan</string>
     <string name="simpan">Simpan</string>
@@ -36,4 +37,6 @@
     <string name="recycle_bin_delete_confirmation_message">Apakah Anda yakin ingin menghapus tugas ini secara permanen?</string>
     <string name="recycle_bin_delete">Hapus</string>
     <string name="recycle_bin_cancel">Batal</string>
+=======
+>>>>>>> b94639762f65e6dc734d2165cfd1f333c57a71b0
 </resources>
